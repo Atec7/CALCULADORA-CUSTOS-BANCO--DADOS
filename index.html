@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Calculadora Firebase Delivery</title>
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f4; }
+    h1 { color: #333; }
+    label, input, button { font-size: 16px; margin-top: 10px; }
+    .result, .explicacao { margin-top: 20px; padding: 15px; background: #e0f7fa; border-radius: 8px; }
+    .explicacao { background: #fff3e0; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background-color: #ffe0b2; }
+    #grafico { margin-top: 40px; }
+  </style>
+</head>
+<body>
+  <h1>Calculadora de Custos Banco de Dados</h1>
+
+  <div class="explicacao">
+    <h3>🔍 Explicação das Variáveis</h3>
+    <ul>
+      <li><strong>Pedidos por dia:</strong> Quantos pedidos seu app recebe diariamente.</li>
+      <li><strong>Tamanho por pedido (KB):</strong> Espaço que cada pedido ocupa no banco. Exemplo real: ~1 KB.</li>
+      <li><strong>Leituras por pedido:</strong> Quantas vezes os dados de um pedido são acessados (cliente, entregador, admin).</li>
+      <li><strong>Armazenamento:</strong> Espaço ocupado pelos dados no Firebase. Cobrado por GB/mês.</li>
+      <li><strong>Download:</strong> Dados lidos pelos usuários. Cada leitura consome tráfego. Cobrado por GB/mês.</li>
+      <li><strong>Plano "Duo":</strong> Seu plano base de R$59,90, que aumenta R$2 a cada R$2 de custo com Firebase.</li>
+    </ul>
+  </div>
+
+  <label for="pedidos">Pedidos por dia:</label><br>
+  <input type="number" id="pedidos" value="200"><br>
+
+  <label for="tamanho">Tamanho por pedido (KB):</label><br>
+  <input type="number" id="tamanho" value="1"><br>
+
+  <label for="leituras">Leituras por pedido:</label><br>
+  <input type="number" id="leituras" value="3"><br><br>
+
+  <button onclick="calcular()">Calcular</button>
+
+  <div class="result" id="resultado"></div>
+  <div id="grafico" style="width: 100%; height: 500px;"></div>
+
+  <script type="text/javascript">
+    google.charts.load('current', {packages: ['corechart']});
+
+    function calcular() {
+      const pedidosDia = parseInt(document.getElementById('pedidos').value);
+      const tamanhoKB = parseInt(document.getElementById('tamanho').value);
+      const leituras = parseInt(document.getElementById('leituras').value);
+
+      const diasMes = 30;
+      const MBporDia = (pedidosDia * tamanhoKB) / 1024;
+      const GBarmazenamentoMensal = (MBporDia * diasMes) / 1024;
+      const GBdownloadMensal = GBarmazenamentoMensal * leituras;
+
+      const custoArmazenamentoUSD = GBarmazenamentoMensal * 0.18;
+      const custoDownloadUSD = GBdownloadMensal * 0.12;
+      const custoTotalUSD = custoArmazenamentoUSD + custoDownloadUSD;
+
+      const cotacao = 5.43;
+      const custoTotalBRL = custoTotalUSD * cotacao;
+
+      const reajuste = Math.floor(custoTotalBRL / 2) * 2;
+      const planoBase = 59.90;
+      const planoFinal = planoBase + reajuste;
+
+      let tabela = `
+        <h3>📊 Resultados Mensais:</h3>
+        - Armazenamento estimado: ${GBarmazenamentoMensal.toFixed(4)} GB/mês<br>
+        - Download estimado: ${GBdownloadMensal.toFixed(4)} GB/mês<br>
+        - Custo Firebase: R$ ${custoTotalBRL.toFixed(2)}<br>
+        - Reajuste aplicado: R$ ${reajuste.toFixed(2)}<br>
+        - Valor final do plano "Duo": <strong>R$ ${planoFinal.toFixed(2)}</strong><br><br>
+        <h3>📅 Projeção Anual (Janeiro a Dezembro)</h3>
+        <table>
+          <tr>
+            <th>Mês</th>
+            <th>Armazenamento acumulado (GB)</th>
+            <th>Download (GB)</th>
+            <th>Custo Firebase (R$)</th>
+            <th>Reajuste</th>
+            <th>Plano Final</th>
+          </tr>
+      `;
+
+      let acumuladoGB = 0;
+      let dadosGrafico = [['Mês', 'Armazenamento (GB)', 'Plano Final (R$)']];
+      const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+                     "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+      for (let i = 0; i < 12; i++) {
+        acumuladoGB += GBarmazenamentoMensal;
+        let download = acumuladoGB * leituras;
+        let custoUSD = acumuladoGB * 0.18 + download * 0.12;
+        let custoBRL = custoUSD * cotacao;
+        let reajusteMes = Math.floor(custoBRL / 2) * 2;
+        let planoMes = planoBase + reajusteMes;
+
+        tabela += `
+          <tr>
+            <td>${meses[i]}</td>
+            <td>${acumuladoGB.toFixed(2)}</td>
+            <td>${download.toFixed(2)}</td>
+            <td>R$ ${custoBRL.toFixed(2)}</td>
+            <td>R$ ${reajusteMes.toFixed(2)}</td>
+            <td>R$ ${planoMes.toFixed(2)}</td>
+          </tr>
+        `;
+
+        dadosGrafico.push([meses[i], acumuladoGB, planoMes]);
+      }
+
+      tabela += `</table>`;
+      document.getElementById('resultado').innerHTML = tabela;
+
+      google.charts.setOnLoadCallback(function() {
+        const data = google.visualization.arrayToDataTable(dadosGrafico);
+        const options = {
+          title: '📊 Armazenamento vs Valor do Plano (Ano)',
+          hAxis: { title: 'Mês' },
+          vAxis: { title: 'Valor / Armazenamento' },
+          seriesType: 'bars',
+          colors: ['#42a5f5', '#ef6c00']
+        };
+        const chart = new google.visualization.ComboChart(document.getElementById('grafico'));
+        chart.draw(data, options);
+      });
+    }
+  </script>
+</body>
+</html>
