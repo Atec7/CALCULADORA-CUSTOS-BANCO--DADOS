@@ -17,7 +17,7 @@
   </style>
 </head>
 <body>
-  <h1>Calculadora de Custos Banco de Dados</h1>
+  <h1>📦 Calculadora de Custos Firebase para App de Delivery</h1>
 
   <div class="explicacao">
     <h3>🔍 Explicação das Variáveis</h3>
@@ -25,6 +25,8 @@
       <li><strong>Pedidos por dia:</strong> Quantos pedidos seu app recebe diariamente.</li>
       <li><strong>Tamanho por pedido (KB):</strong> Espaço que cada pedido ocupa no banco. Exemplo real: ~1 KB.</li>
       <li><strong>Leituras por pedido:</strong> Quantas vezes os dados de um pedido são acessados (cliente, entregador, admin).</li>
+      <li><strong>Produtos cadastrados:</strong> Quantidade de itens no cardápio.</li>
+      <li><strong>Tamanho por produto (KB):</strong> Espaço médio que cada produto ocupa no banco. Exemplo real: ~0.46 KB.</li>
       <li><strong>Armazenamento:</strong> Espaço ocupado pelos dados no Firebase. Cobrado por GB/mês.</li>
       <li><strong>Download:</strong> Dados lidos pelos usuários. Cada leitura consome tráfego. Cobrado por GB/mês.</li>
       <li><strong>Plano "Duo":</strong> Seu plano base de R$59,90, que aumenta R$2 a cada R$2 de custo com Firebase.</li>
@@ -38,7 +40,13 @@
   <input type="number" id="tamanho" value="1"><br>
 
   <label for="leituras">Leituras por pedido:</label><br>
-  <input type="number" id="leituras" value="3"><br><br>
+  <input type="number" id="leituras" value="3"><br>
+
+  <label for="produtos">Quantidade de produtos cadastrados:</label><br>
+  <input type="number" id="produtos" value="100"><br>
+
+  <label for="tamanhoProduto">Tamanho por produto (KB):</label><br>
+  <input type="number" id="tamanhoProduto" value="0.46"><br><br>
 
   <button onclick="calcular()">Calcular</button>
 
@@ -49,30 +57,41 @@
     google.charts.load('current', {packages: ['corechart']});
 
     function calcular() {
-      const pedidosDia = parseInt(document.getElementById('pedidos').value);
-      const tamanhoKB = parseInt(document.getElementById('tamanho').value);
-      const leituras = parseInt(document.getElementById('leituras').value);
+      const pedidosDia = parseFloat(document.getElementById('pedidos').value);
+      const tamanhoKB = parseFloat(document.getElementById('tamanho').value);
+      const leituras = parseFloat(document.getElementById('leituras').value);
+      const produtos = parseFloat(document.getElementById('produtos').value);
+      const tamanhoProdutoKB = parseFloat(document.getElementById('tamanhoProduto').value);
 
       const diasMes = 30;
-      const MBporDia = (pedidosDia * tamanhoKB) / 1024;
-      const GBarmazenamentoMensal = (MBporDia * diasMes) / 1024;
-      const GBdownloadMensal = GBarmazenamentoMensal * leituras;
-
-      const custoArmazenamentoUSD = GBarmazenamentoMensal * 0.18;
-      const custoDownloadUSD = GBdownloadMensal * 0.12;
-      const custoTotalUSD = custoArmazenamentoUSD + custoDownloadUSD;
-
       const cotacao = 5.43;
+      const planoBase = 59.90;
+
+      // Armazenamento de pedidos
+      const MBporDia = (pedidosDia * tamanhoKB) / 1024;
+      const GBarmazenamentoMensalPedidos = (MBporDia * diasMes) / 1024;
+
+      // Armazenamento de produtos
+      const armazenamentoProdutosGB = (produtos * tamanhoProdutoKB) / 1024;
+
+      // Total
+      const GBarmazenamentoMensalTotal = GBarmazenamentoMensalPedidos + armazenamentoProdutosGB;
+      const GBdownloadMensalTotal = GBarmazenamentoMensalTotal * leituras;
+
+      const custoArmazenamentoUSD = GBarmazenamentoMensalTotal * 0.18;
+      const custoDownloadUSD = GBdownloadMensalTotal * 0.12;
+      const custoTotalUSD = custoArmazenamentoUSD + custoDownloadUSD;
       const custoTotalBRL = custoTotalUSD * cotacao;
 
       const reajuste = Math.floor(custoTotalBRL / 2) * 2;
-      const planoBase = 59.90;
       const planoFinal = planoBase + reajuste;
 
       let tabela = `
         <h3>📊 Resultados Mensais:</h3>
-        - Armazenamento estimado: ${GBarmazenamentoMensal.toFixed(4)} GB/mês<br>
-        - Download estimado: ${GBdownloadMensal.toFixed(4)} GB/mês<br>
+        - Armazenamento de pedidos: ${GBarmazenamentoMensalPedidos.toFixed(4)} GB/mês<br>
+        - Armazenamento de produtos: ${armazenamentoProdutosGB.toFixed(4)} GB<br>
+        - Armazenamento total: ${GBarmazenamentoMensalTotal.toFixed(4)} GB/mês<br>
+        - Download estimado: ${GBdownloadMensalTotal.toFixed(4)} GB/mês<br>
         - Custo Firebase: R$ ${custoTotalBRL.toFixed(2)}<br>
         - Reajuste aplicado: R$ ${reajuste.toFixed(2)}<br>
         - Valor final do plano "Duo": <strong>R$ ${planoFinal.toFixed(2)}</strong><br><br>
@@ -88,13 +107,13 @@
           </tr>
       `;
 
-      let acumuladoGB = 0;
+      let acumuladoGB = armazenamentoProdutosGB;
       let dadosGrafico = [['Mês', 'Armazenamento (GB)', 'Plano Final (R$)']];
       const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
                      "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
       for (let i = 0; i < 12; i++) {
-        acumuladoGB += GBarmazenamentoMensal;
+        acumuladoGB += GBarmazenamentoMensalPedidos;
         let download = acumuladoGB * leituras;
         let custoUSD = acumuladoGB * 0.18 + download * 0.12;
         let custoBRL = custoUSD * cotacao;
@@ -134,3 +153,4 @@
   </script>
 </body>
 </html>
+``
