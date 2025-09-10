@@ -4,58 +4,114 @@
   <meta charset="UTF-8">
   <title>Calculadora Firebase Delivery</title>
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-database.js";
+    window.firebaseUtils = { initializeApp, getDatabase, ref, onValue };
+  </script>
   <style>
     body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f4; }
     h1 { color: #333; }
-    label, input, button { font-size: 16px; margin-top: 10px; }
+    label, input, button, select { font-size: 16px; margin-top: 10px; }
     .result, .explicacao { margin-top: 20px; padding: 15px; background: #e0f7fa; border-radius: 8px; }
     .explicacao { background: #fff3e0; }
     table { width: 100%; border-collapse: collapse; margin-top: 15px; }
     th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
     th { background-color: #ffe0b2; }
-    #grafico { margin-top: 40px; }
+    #grafico, #graficoClientes { margin-top: 40px; }
+    .tabs { margin-top: 20px; }
+    .tab-button { padding: 10px 20px; cursor: pointer; background: #42a5f5; color: white; border: none; border-radius: 4px; margin-right: 5px; }
+    .tab-button.active { background: #ef6c00; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .cliente-form { margin-top: 20px; padding: 15px; background: #fff3e0; border-radius: 8px; }
+    .action-btn { margin: 0 2px; padding: 4px 8px; cursor: pointer; border-radius: 4px; border: none; }
+    .edit-btn { background: #42a5f5; color: white; }
+    .delete-btn { background: #ef5350; color: white; }
   </style>
 </head>
 <body>
-  <h1>📦 Calculadora de Custos Firebase para App de Delivery</h1>
+  <h1>Previsão de Investimento por Cliente</h1>
 
-  <div class="explicacao">
-    <h3>🔍 Explicação das Variáveis</h3>
-    <ul>
-      <li><strong>Pedidos por dia:</strong> Quantos pedidos seu app recebe diariamente.</li>
-      <li><strong>Tamanho por pedido (KB):</strong> Espaço que cada pedido ocupa no banco. Exemplo real: ~1 KB.</li>
-      <li><strong>Leituras por pedido:</strong> Quantas vezes os dados de um pedido são acessados (cliente, entregador, admin).</li>
-      <li><strong>Produtos cadastrados:</strong> Quantidade de itens no cardápio.</li>
-      <li><strong>Tamanho por produto (KB):</strong> Espaço médio que cada produto ocupa no banco. Exemplo real: ~0.46 KB.</li>
-      <li><strong>Armazenamento:</strong> Espaço ocupado pelos dados no Firebase. Cobrado por GB/mês.</li>
-      <li><strong>Download:</strong> Dados lidos pelos usuários. Cada leitura consome tráfego. Cobrado por GB/mês.</li>
-      <li><strong>Plano "Duo":</strong> Seu plano base de R$59,90, que aumenta R$2 a cada R$2 de custo com Firebase.</li>
-    </ul>
+  <div class="tabs">
+    <button class="tab-button active" data-tab="geral">Calculadora Geral</button>
+    <button class="tab-button" data-tab="clientes">Custos por Cliente</button>
   </div>
 
-  <label for="pedidos">Pedidos por dia:</label><br>
-  <input type="number" id="pedidos" value="200"><br>
+  <!-- ABA 1: Calculadora Geral -->
+  <div id="geral" class="tab-content active">
+    <div class="explicacao">
+      <h3>🔍 Explicação das Variáveis</h3>
+      <ul>
+        <li><strong>Pedidos por dia:</strong> Quantos pedidos seu app recebe diariamente.</li>
+        <li><strong>Tamanho por pedido (KB):</strong> Espaço que cada pedido ocupa no banco. Exemplo real: ~1 KB.</li>
+        <li><strong>Leituras por pedido:</strong> Quantas vezes os dados de um pedido são acessados (cliente, entregador, admin).</li>
+        <li><strong>Produtos cadastrados:</strong> Quantidade de itens no cardápio.</li>
+        <li><strong>Tamanho por produto (KB):</strong> Espaço médio que cada produto ocupa no banco. Exemplo real: ~0.46 KB.</li>
+        <li><strong>Armazenamento:</strong> Espaço ocupado pelos dados no Firebase. Cobrado por GB/mês.</li>
+        <li><strong>Download:</strong> Dados lidos pelos usuários. Cada leitura consome tráfego. Cobrado por GB/mês.</li>
+      </ul>
+    </div>
 
-  <label for="tamanho">Tamanho por pedido (KB):</label><br>
-  <input type="number" id="tamanho" value="1"><br>
+    <label for="pedidos">Pedidos por dia:</label><br>
+    <input type="number" id="pedidos" value="200"><br>
 
-  <label for="leituras">Leituras por pedido:</label><br>
-  <input type="number" id="leituras" value="3"><br>
+    <label for="tamanho">Tamanho por pedido (KB):</label><br>
+    <input type="number" id="tamanho" value="1"><br>
 
-  <label for="produtos">Quantidade de produtos cadastrados:</label><br>
-  <input type="number" id="produtos" value="100"><br>
+    <label for="leituras">Leituras por pedido:</label><br>
+    <input type="number" id="leituras" value="3"><br>
 
-  <label for="tamanhoProduto">Tamanho por produto (KB):</label><br>
-  <input type="number" id="tamanhoProduto" value="0.46"><br><br>
+    <label for="produtos">Quantidade de produtos cadastrados:</label><br>
+    <input type="number" id="produtos" value="100"><br>
 
-  <button onclick="calcular()">Calcular</button>
+    <label for="tamanhoProduto">Tamanho por produto (KB):</label><br>
+    <input type="number" id="tamanhoProduto" value="0.46"><br><br>
 
-  <div class="result" id="resultado"></div>
-  <div id="grafico" style="width: 100%; height: 500px;"></div>
+    <button onclick="calcular()">Calcular</button>
+
+    <div class="result" id="resultado"></div>
+    <div id="grafico" style="width: 100%; height: 500px;"></div>
+  </div>
+
+  <!-- ABA 2: Custos por Cliente -->
+  <div id="clientes" class="tab-content">
+    <div class="cliente-form">
+      <h3>➕ Cadastrar Cliente / Banco Firebase</h3>
+      <label>Nome do Cliente:</label><br>
+      <input type="text" id="clienteNome"><br>
+      <label>URL do Banco Firebase:</label><br>
+      <input type="text" id="clienteBanco"><br>
+      <label>Leituras por pedido:</label><br>
+      <input type="number" id="clienteLeituras" value="3"><br>
+      <label>Tamanho médio por pedido (KB):</label><br>
+      <input type="number" id="clienteTamanho" value="1"><br>
+      <label>Tamanho médio por produto (KB):</label><br>
+      <input type="number" id="clienteTamanhoProduto" value="0.46"><br><br>
+      <button onclick="adicionarCliente()">Adicionar Cliente</button>
+    </div>
+
+    <h3>📊 Custos por Cliente</h3>
+    <div class="result" id="clientesResultado"></div>
+    <div id="graficoClientes" style="width: 100%; height: 500px;"></div>
+  </div>
 
   <script type="text/javascript">
     google.charts.load('current', {packages: ['corechart']});
 
+    // === TABS NAVIGATION ===
+    const tabs = document.querySelectorAll('.tab-button');
+    const contents = document.querySelectorAll('.tab-content');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        contents.forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    // === Calculadora Geral ===
     function calcular() {
       const pedidosDia = parseFloat(document.getElementById('pedidos').value);
       const tamanhoKB = parseFloat(document.getElementById('tamanho').value);
@@ -65,26 +121,14 @@
 
       const diasMes = 30;
       const cotacao = 5.43;
-      const planoBase = 59.90;
 
-      // Armazenamento de pedidos
       const MBporDia = (pedidosDia * tamanhoKB) / 1024;
       const GBarmazenamentoMensalPedidos = (MBporDia * diasMes) / 1024;
-
-      // Armazenamento de produtos
       const armazenamentoProdutosGB = (produtos * tamanhoProdutoKB) / 1024;
-
-      // Total
       const GBarmazenamentoMensalTotal = GBarmazenamentoMensalPedidos + armazenamentoProdutosGB;
       const GBdownloadMensalTotal = GBarmazenamentoMensalTotal * leituras;
 
-      const custoArmazenamentoUSD = GBarmazenamentoMensalTotal * 0.18;
-      const custoDownloadUSD = GBdownloadMensalTotal * 0.12;
-      const custoTotalUSD = custoArmazenamentoUSD + custoDownloadUSD;
-      const custoTotalBRL = custoTotalUSD * cotacao;
-
-      const reajuste = Math.floor(custoTotalBRL / 2) * 2;
-      const planoFinal = planoBase + reajuste;
+      const custoBRL = (GBarmazenamentoMensalTotal*0.18 + GBdownloadMensalTotal*0.12) * cotacao;
 
       let tabela = `
         <h3>📊 Resultados Mensais:</h3>
@@ -92,65 +136,117 @@
         - Armazenamento de produtos: ${armazenamentoProdutosGB.toFixed(4)} GB<br>
         - Armazenamento total: ${GBarmazenamentoMensalTotal.toFixed(4)} GB/mês<br>
         - Download estimado: ${GBdownloadMensalTotal.toFixed(4)} GB/mês<br>
-        - Custo Firebase: R$ ${custoTotalBRL.toFixed(2)}<br>
-        - Reajuste aplicado: R$ ${reajuste.toFixed(2)}<br>
-        - Valor final do plano "Duo": <strong>R$ ${planoFinal.toFixed(2)}</strong><br><br>
-        <h3>📅 Projeção Anual (Janeiro a Dezembro)</h3>
-        <table>
-          <tr>
-            <th>Mês</th>
-            <th>Armazenamento acumulado (GB)</th>
-            <th>Download (GB)</th>
-            <th>Custo Firebase (R$)</th>
-            <th>Reajuste</th>
-            <th>Plano Final</th>
-          </tr>
+        - Custo Firebase absoluto: R$ ${custoBRL.toFixed(2)}<br><br>
       `;
+      document.getElementById('resultado').innerHTML = tabela;
+    }
 
-      let acumuladoGB = armazenamentoProdutosGB;
-      let dadosGrafico = [['Mês', 'Armazenamento (GB)', 'Plano Final (R$)']];
-      const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
-                     "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    // === Aba Clientes ===
+    let clientes = JSON.parse(localStorage.getItem('clientes')) || [];
+    let editarIndex = null;
 
-      for (let i = 0; i < 12; i++) {
-        acumuladoGB += GBarmazenamentoMensalPedidos;
-        let download = acumuladoGB * leituras;
-        let custoUSD = acumuladoGB * 0.18 + download * 0.12;
-        let custoBRL = custoUSD * cotacao;
-        let reajusteMes = Math.floor(custoBRL / 2) * 2;
-        let planoMes = planoBase + reajusteMes;
+    function adicionarCliente(){
+      const cliente = {
+        nome: document.getElementById('clienteNome').value,
+        banco: document.getElementById('clienteBanco').value,
+        leituras: parseFloat(document.getElementById('clienteLeituras').value),
+        tamanhoPedido: parseFloat(document.getElementById('clienteTamanho').value),
+        tamanhoProduto: parseFloat(document.getElementById('clienteTamanhoProduto').value)
+      };
 
-        tabela += `
-          <tr>
-            <td>${meses[i]}</td>
-            <td>${acumuladoGB.toFixed(2)}</td>
-            <td>${download.toFixed(2)}</td>
-            <td>R$ ${custoBRL.toFixed(2)}</td>
-            <td>R$ ${reajusteMes.toFixed(2)}</td>
-            <td>R$ ${planoMes.toFixed(2)}</td>
-          </tr>
-        `;
+      if(editarIndex !== null){
+        clientes[editarIndex] = cliente;
+        editarIndex = null;
+      } else {
+        clientes.push(cliente);
+      }
 
-        dadosGrafico.push([meses[i], acumuladoGB, planoMes]);
+      localStorage.setItem('clientes', JSON.stringify(clientes));
+      document.getElementById('clienteNome').value = '';
+      document.getElementById('clienteBanco').value = '';
+      carregarClientes();
+    }
+
+    function editarCliente(index){
+      const c = clientes[index];
+      document.getElementById('clienteNome').value = c.nome;
+      document.getElementById('clienteBanco').value = c.banco;
+      document.getElementById('clienteLeituras').value = c.leituras;
+      document.getElementById('clienteTamanho').value = c.tamanhoPedido;
+      document.getElementById('clienteTamanhoProduto').value = c.tamanhoProduto;
+      editarIndex = index;
+    }
+
+    function excluirCliente(index){
+      clientes.splice(index,1);
+      localStorage.setItem('clientes', JSON.stringify(clientes));
+      carregarClientes();
+    }
+
+    async function carregarClientes(){
+      const cotacao = 5.43;
+      let tabela = `<table><tr><th>Cliente</th><th>Pedidos</th><th>Produtos</th><th>Armazenamento (GB)</th><th>Download (GB)</th><th>Custo R$</th><th>Ações</th></tr>`;
+      let dadosGrafico = [['Cliente','Custo Firebase (R$)']];
+      let totalCusto = 0;
+
+      for (let i=0;i<clientes.length;i++){
+        const c = clientes[i];
+        try{
+          const app = firebaseUtils.initializeApp({databaseURL:c.banco}, c.nome);
+          const db = firebaseUtils.getDatabase(app);
+          const pedidosRef = firebaseUtils.ref(db,'pedidos');
+          const produtosRef = firebaseUtils.ref(db,'produtos');
+
+          await new Promise(resolve=>{
+            firebaseUtils.onValue(pedidosRef, pedidosSnap=>{
+              const pedidosData = pedidosSnap.val() || {};
+              const pedidosCount = Object.keys(pedidosData).length;
+
+              firebaseUtils.onValue(produtosRef, produtosSnap=>{
+                const produtosData = produtosSnap.val() || {};
+                const produtosCount = Object.keys(produtosData).length;
+
+                const MBporDia = (pedidosCount * c.tamanhoPedido)/1024;
+                const armazenamentoPedidosGB = (MBporDia*30)/1024;
+                const armazenamentoProdutosGB = (produtosCount * c.tamanhoProduto)/1024;
+                const armazenamentoTotalGB = armazenamentoPedidosGB + armazenamentoProdutosGB;
+                const downloadGB = armazenamentoTotalGB * c.leituras;
+                const custoBRL = (armazenamentoTotalGB*0.18 + downloadGB*0.12)*cotacao;
+
+                totalCusto += custoBRL;
+                tabela += `<tr>
+                  <td>${c.nome}</td>
+                  <td>${pedidosCount}</td>
+                  <td>${produtosCount}</td>
+                  <td>${armazenamentoTotalGB.toFixed(4)}</td>
+                  <td>${downloadGB.toFixed(4)}</td>
+                  <td>R$ ${custoBRL.toFixed(2)}</td>
+                  <td>
+                    <button class="action-btn edit-btn" onclick="editarCliente(${i})">Editar</button>
+                    <button class="action-btn delete-btn" onclick="excluirCliente(${i})">Excluir</button>
+                  </td>
+                </tr>`;
+                dadosGrafico.push([c.nome, custoBRL]);
+                resolve();
+              });
+            });
+          });
+        } catch(e){ console.error('Erro cliente', c.nome,e); }
       }
 
       tabela += `</table>`;
-      document.getElementById('resultado').innerHTML = tabela;
+      tabela += `<h3>Total Estimado Firebase: R$ ${totalCusto.toFixed(2)}</h3>`;
+      document.getElementById('clientesResultado').innerHTML = tabela;
 
-      google.charts.setOnLoadCallback(function() {
+      google.charts.setOnLoadCallback(()=>{
         const data = google.visualization.arrayToDataTable(dadosGrafico);
-        const options = {
-          title: '📊 Armazenamento vs Valor do Plano (Ano)',
-          hAxis: { title: 'Mês' },
-          vAxis: { title: 'Valor / Armazenamento' },
-          seriesType: 'bars',
-          colors: ['#42a5f5', '#ef6c00']
-        };
-        const chart = new google.visualization.ComboChart(document.getElementById('grafico'));
+        const options = { title:'📊 Custo absoluto por Cliente', hAxis:{title:'Cliente'}, vAxis:{title:'Custo (R$)'}, colors:['#ef6c00'] };
+        const chart = new google.visualization.ColumnChart(document.getElementById('graficoClientes'));
         chart.draw(data, options);
       });
     }
+
+    carregarClientes();
   </script>
 </body>
 </html>
-``
