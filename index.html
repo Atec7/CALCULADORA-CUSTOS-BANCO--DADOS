@@ -1,252 +1,195 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <title>Calculadora Firebase Delivery</title>
-  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-database.js";
-    window.firebaseUtils = { initializeApp, getDatabase, ref, onValue };
-  </script>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f4; }
-    h1 { color: #333; }
-    label, input, button, select { font-size: 16px; margin-top: 10px; }
-    .result, .explicacao { margin-top: 20px; padding: 15px; background: #e0f7fa; border-radius: 8px; }
-    .explicacao { background: #fff3e0; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-    th { background-color: #ffe0b2; }
-    #grafico, #graficoClientes { margin-top: 40px; }
-    .tabs { margin-top: 20px; }
-    .tab-button { padding: 10px 20px; cursor: pointer; background: #42a5f5; color: white; border: none; border-radius: 4px; margin-right: 5px; }
-    .tab-button.active { background: #ef6c00; }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-    .cliente-form { margin-top: 20px; padding: 15px; background: #fff3e0; border-radius: 8px; }
-    .action-btn { margin: 0 2px; padding: 4px 8px; cursor: pointer; border-radius: 4px; border: none; }
-    .edit-btn { background: #42a5f5; color: white; }
-    .delete-btn { background: #ef5350; color: white; }
-  </style>
+<meta charset="UTF-8">
+<title>Painel Financeiro AtecSeven</title>
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-database.js";
+window.firebaseUtils={initializeApp,getDatabase,ref,onValue};
+</script>
+<style>
+body{margin:0;font-family:'Segoe UI',sans-serif;background:#0b1d33;color:#fff;}
+header{background:#102a4a;padding:25px;text-align:center;font-size:28px;font-weight:bold;color:#e0e1dd;}
+.container{max-width:1400px;margin:auto;padding:20px;}
+h2{color:#e0e1dd;margin-bottom:10px;}
+input,button{font-size:16px;margin-top:10px;padding:8px;border-radius:4px;border:none;}
+input{width:100%;box-sizing:border-box;}
+button{cursor:pointer;background:#005f99;color:#fff;transition:0.3s;}
+button:hover{background:#0077b6;}
+.tabs{margin-bottom:20px;display:flex;flex-wrap:wrap;gap:5px;}
+.tab-button{padding:10px 20px;cursor:pointer;background:#023e8a;color:#fff;border-radius:4px;}
+.tab-button.active{background:#0077b6;}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+.cliente-form{background:#1b2a47;padding:20px;border-radius:8px;margin-bottom:20px;}
+table{width:100%;border-collapse:collapse;margin-top:15px;background:#102a4a;}
+th,td{border:1px solid #415a77;padding:10px;text-align:center;}
+th{background-color:#023e8a;}
+.action-btn{padding:5px 10px;border-radius:4px;border:none;cursor:pointer;margin:0 2px;}
+.edit-btn{background:#0077b6;color:#fff;}
+.delete-btn{background:#ef233c;color:#fff;}
+.kpi-container{display:flex;flex-wrap:wrap;gap:20px;margin-bottom:20px;}
+.kpi{flex:1;min-width:180px;background:#1b2a47;padding:20px;border-radius:8px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,0.3);transition:0.3s;}
+.kpi h3{margin:0;font-size:14px;color:#a8dadc;}
+.kpi p{font-size:22px;margin:5px 0 0;color:#f1faee;font-weight:bold;}
+#graficoClientes,#graficoFaturamento{margin-top:30px;height:500px;}
+.btn-clean{background:#ef6c00;color:#fff;margin-top:10px;}
+</style>
 </head>
 <body>
-  <h1>Previsão de Investimento por Cliente</h1>
-
+<header>Painel Financeiro AtecSeven Tecnologia</header>
+<div class="container">
   <div class="tabs">
-    <button class="tab-button active" data-tab="geral">Calculadora Geral</button>
-    <button class="tab-button" data-tab="clientes">Custos por Cliente</button>
+    <button class="tab-button active" data-tab="clientesTab">Clientes</button>
+    <button class="tab-button" data-tab="indicadoresTab">KPIs & Gráficos</button>
   </div>
-
-  <!-- ABA 1: Calculadora Geral -->
-  <div id="geral" class="tab-content active">
-    <div class="explicacao">
-      <h3>🔍 Explicação das Variáveis</h3>
-      <ul>
-        <li><strong>Pedidos por dia:</strong> Quantos pedidos seu app recebe diariamente.</li>
-        <li><strong>Tamanho por pedido (KB):</strong> Espaço que cada pedido ocupa no banco. Exemplo real: ~1 KB.</li>
-        <li><strong>Leituras por pedido:</strong> Quantas vezes os dados de um pedido são acessados (cliente, entregador, admin).</li>
-        <li><strong>Produtos cadastrados:</strong> Quantidade de itens no cardápio.</li>
-        <li><strong>Tamanho por produto (KB):</strong> Espaço médio que cada produto ocupa no banco. Exemplo real: ~0.46 KB.</li>
-        <li><strong>Armazenamento:</strong> Espaço ocupado pelos dados no Firebase. Cobrado por GB/mês.</li>
-        <li><strong>Download:</strong> Dados lidos pelos usuários. Cada leitura consome tráfego. Cobrado por GB/mês.</li>
-      </ul>
-    </div>
-
-    <label for="pedidos">Pedidos por dia:</label><br>
-    <input type="number" id="pedidos" value="200"><br>
-
-    <label for="tamanho">Tamanho por pedido (KB):</label><br>
-    <input type="number" id="tamanho" value="1"><br>
-
-    <label for="leituras">Leituras por pedido:</label><br>
-    <input type="number" id="leituras" value="3"><br>
-
-    <label for="produtos">Quantidade de produtos cadastrados:</label><br>
-    <input type="number" id="produtos" value="100"><br>
-
-    <label for="tamanhoProduto">Tamanho por produto (KB):</label><br>
-    <input type="number" id="tamanhoProduto" value="0.46"><br><br>
-
-    <button onclick="calcular()">Calcular</button>
-
-    <div class="result" id="resultado"></div>
-    <div id="grafico" style="width: 100%; height: 500px;"></div>
-  </div>
-
-  <!-- ABA 2: Custos por Cliente -->
-  <div id="clientes" class="tab-content">
+  <div id="clientesTab" class="tab-content active">
     <div class="cliente-form">
-      <h3>➕ Cadastrar Cliente / Banco Firebase</h3>
-      <label>Nome do Cliente:</label><br>
+      <h2>➕ Cadastrar Cliente</h2>
+      <label>Nome do Cliente:</label>
       <input type="text" id="clienteNome"><br>
-      <label>URL do Banco Firebase:</label><br>
+      <label>URL do Banco Firebase:</label>
       <input type="text" id="clienteBanco"><br>
-      <label>Leituras por pedido:</label><br>
-      <input type="number" id="clienteLeituras" value="3"><br>
-      <label>Tamanho médio por pedido (KB):</label><br>
-      <input type="number" id="clienteTamanho" value="1"><br>
-      <label>Tamanho médio por produto (KB):</label><br>
-      <input type="number" id="clienteTamanhoProduto" value="0.46"><br><br>
-      <button onclick="adicionarCliente()">Adicionar Cliente</button>
+      <label>Mensalidade do Cliente (R$):</label>
+      <input type="number" id="clienteMensalidade"><br><br>
+      <button onclick="adicionarCliente()">Adicionar / Salvar Cliente</button>
+      <button class="btn-clean" onclick="limparClientes()">Limpar Todos os Clientes</button>
     </div>
-
-    <h3>📊 Custos por Cliente</h3>
-    <div class="result" id="clientesResultado"></div>
-    <div id="graficoClientes" style="width: 100%; height: 500px;"></div>
+    <div id="clientesResultado"></div>
   </div>
+  <div id="indicadoresTab" class="tab-content">
+    <h2>📊 KPIs e Gráficos</h2>
+    <div class="kpi-container">
+      <div class="kpi"><h3>Clientes Ativos</h3><p id="kpiClientes">0</p></div>
+      <div class="kpi"><h3>Armazenamento Total (GB)</h3><p id="kpiArmazenamento">0</p></div>
+      <div class="kpi"><h3>Download Total (GB)</h3><p id="kpiDownload">0</p></div>
+      <div class="kpi"><h3>Despesas Firebase (R$)</h3><p id="kpiFirebase">0</p></div>
+      <div class="kpi"><h3>Faturamento Bruto (R$)</h3><p id="kpiBruto">0</p></div>
+      <div class="kpi"><h3>Faturamento Líquido (R$)</h3><p id="kpiLiquido">0</p></div>
+      <div class="kpi"><h3>% do Faturamento no Firebase</h3><p id="kpiPercentFirebase">0%</p></div>
+      <div class="kpi"><h3>Cliente Mais Caro (R$)</h3><p id="kpiClienteCaro">0</p></div>
+      <div class="kpi"><h3>Cliente Mais Lucrativo (R$)</h3><p id="kpiClienteLucro">0</p></div>
+    </div>
+    <div id="graficoClientes"></div>
+    <div id="graficoFaturamento"></div>
+    <button onclick="carregarClientes()">🔄 Atualizar Agora</button>
+  </div>
+</div>
+<script type="text/javascript">
+google.charts.load('current',{packages:['corechart']});
+const tabs=document.querySelectorAll('.tab-button');
+const contents=document.querySelectorAll('.tab-content');
+tabs.forEach(tab=>tab.addEventListener('click',()=>{
+  tabs.forEach(t=>t.classList.remove('active'));
+  contents.forEach(c=>c.classList.remove('active'));
+  tab.classList.add('active');
+  document.getElementById(tab.dataset.tab).classList.add('active');
+}));
+let clientes=JSON.parse(localStorage.getItem('clientes'))||[];
+let editarIndex=null;
 
-  <script type="text/javascript">
-    google.charts.load('current', {packages: ['corechart']});
+function adicionarCliente(){
+  const cliente={nome:document.getElementById('clienteNome').value,banco:document.getElementById('clienteBanco').value,mensalidade:parseFloat(document.getElementById('clienteMensalidade').value)||0};
+  if(editarIndex!==null){clientes[editarIndex]=cliente;editarIndex=null;}else clientes.push(cliente);
+  localStorage.setItem('clientes',JSON.stringify(clientes));
+  limparFormCliente();
+  carregarClientes();
+}
+function limparFormCliente(){
+  document.getElementById('clienteNome').value='';
+  document.getElementById('clienteBanco').value='';
+  document.getElementById('clienteMensalidade').value='';
+}
+function editarCliente(index){
+  const c=clientes[index];
+  document.getElementById('clienteNome').value=c.nome;
+  document.getElementById('clienteBanco').value=c.banco;
+  document.getElementById('clienteMensalidade').value=c.mensalidade;
+  editarIndex=index;
+}
+function excluirCliente(index){clientes.splice(index,1);localStorage.setItem('clientes',JSON.stringify(clientes));carregarClientes();}
+function limparClientes(){if(confirm('Deseja realmente limpar todos os clientes?')){clientes=[];localStorage.setItem('clientes',JSON.stringify(clientes));carregarClientes();}}
 
-    // === TABS NAVIGATION ===
-    const tabs = document.querySelectorAll('.tab-button');
-    const contents = document.querySelectorAll('.tab-content');
-    tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        tabs.forEach(t => t.classList.remove('active'));
-        contents.forEach(c => c.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById(tab.dataset.tab).classList.add('active');
-      });
-    });
+async function carregarClientes(){
+  const cotacao=5.43;
+  let clientesAtivos=0, armazenamentoTotal=0, downloadTotal=0, custoFirebaseTotal=0, faturamentoBruto=0;
+  let maiorCusto=0, maiorLucro=0;
+  const tabela=document.getElementById('clientesResultado');
+  tabela.innerHTML=`<table><tr><th>Cliente</th><th>Armazenamento (GB)</th><th>Download (GB)</th><th>Despesas Firebase (R$)</th><th>Mensalidade (R$)</th><th>Ações</th></tr></table>`;
+  const tabelaBody=tabela.querySelector('table');
 
-    // === Calculadora Geral ===
-    function calcular() {
-      const pedidosDia = parseFloat(document.getElementById('pedidos').value);
-      const tamanhoKB = parseFloat(document.getElementById('tamanho').value);
-      const leituras = parseFloat(document.getElementById('leituras').value);
-      const produtos = parseFloat(document.getElementById('produtos').value);
-      const tamanhoProdutoKB = parseFloat(document.getElementById('tamanhoProduto').value);
+  for(let index=0;index<clientes.length;index++){
+    const c=clientes[index];
+    try{
+      const app=firebaseUtils.initializeApp({databaseURL:c.banco},c.nome);
+      const db=firebaseUtils.getDatabase(app);
+      const pedidosSnap=await new Promise(res=>firebaseUtils.onValue(firebaseUtils.ref(db,'pedidos'),snap=>res(snap.val())));
+      const produtosSnap=await new Promise(res=>firebaseUtils.onValue(firebaseUtils.ref(db,'produtos'),snap=>res(snap.val())));
+      const pedidosData=pedidosSnap||{};
+      const produtosData=produtosSnap||{};
+      const pedidosCount=Object.keys(pedidosData).length;
+      const produtosCount=Object.keys(produtosData).length;
+      const tamanhoPedidoKB=1, tamanhoProdutoKB=0.46, leituras=3, diasMes=30;
+      const MBporDia=(pedidosCount*tamanhoPedidoKB)/1024;
+      const GBarmazenamentoPedidos=(MBporDia*diasMes)/1024;
+      const armazenamentoProdutosGB=(produtosCount*tamanhoProdutoKB)/1024;
+      const GBarmazenamentoTotal=GBarmazenamentoPedidos+armazenamentoProdutosGB;
+      const GBdownloadTotalCliente=GBarmazenamentoTotal*leituras;
+      const custoArmazenamentoUSD=GBarmazenamentoTotal*0.18;
+      const custoDownloadUSD=GBdownloadTotalCliente*0.12;
+      const custoTotalBRL=(custoArmazenamentoUSD+custoDownloadUSD)*cotacao;
 
-      const diasMes = 30;
-      const cotacao = 5.43;
+      clientesAtivos++;
+      armazenamentoTotal+=GBarmazenamentoTotal;
+      downloadTotal+=GBdownloadTotalCliente;
+      custoFirebaseTotal+=custoTotalBRL;
+      faturamentoBruto+=c.mensalidade;
+      if(custoTotalBRL>maiorCusto) maiorCusto=custoTotalBRL;
+      if(c.mensalidade-custoTotalBRL>maiorLucro) maiorLucro=c.mensalidade-custoTotalBRL;
 
-      const MBporDia = (pedidosDia * tamanhoKB) / 1024;
-      const GBarmazenamentoMensalPedidos = (MBporDia * diasMes) / 1024;
-      const armazenamentoProdutosGB = (produtos * tamanhoProdutoKB) / 1024;
-      const GBarmazenamentoMensalTotal = GBarmazenamentoMensalPedidos + armazenamentoProdutosGB;
-      const GBdownloadMensalTotal = GBarmazenamentoMensalTotal * leituras;
+      const row=document.createElement('tr');
+      row.innerHTML=`<td>${c.nome}</td><td>${GBarmazenamentoTotal.toFixed(4)}</td><td>${GBdownloadTotalCliente.toFixed(4)}</td>
+      <td>${custoTotalBRL.toFixed(2)}</td><td>${c.mensalidade.toFixed(2)}</td>
+      <td>
+        <button class="action-btn edit-btn" onclick="editarCliente(${index})">Editar</button>
+        <button class="action-btn delete-btn" onclick="excluirCliente(${index})">Excluir</button>
+      </td>`;
+      tabelaBody.appendChild(row);
 
-      const custoBRL = (GBarmazenamentoMensalTotal*0.18 + GBdownloadMensalTotal*0.12) * cotacao;
+    }catch(e){console.error(e);}
+  }
+  atualizarKPIs(clientesAtivos,armazenamentoTotal,downloadTotal,faturamentoBruto,custoFirebaseTotal,maiorCusto,maiorLucro);
+  desenharGraficos();
+}
 
-      let tabela = `
-        <h3>📊 Resultados Mensais:</h3>
-        - Armazenamento de pedidos: ${GBarmazenamentoMensalPedidos.toFixed(4)} GB/mês<br>
-        - Armazenamento de produtos: ${armazenamentoProdutosGB.toFixed(4)} GB<br>
-        - Armazenamento total: ${GBarmazenamentoMensalTotal.toFixed(4)} GB/mês<br>
-        - Download estimado: ${GBdownloadMensalTotal.toFixed(4)} GB/mês<br>
-        - Custo Firebase absoluto: R$ ${custoBRL.toFixed(2)}<br><br>
-      `;
-      document.getElementById('resultado').innerHTML = tabela;
-    }
+function atualizarKPIs(ativos,armazenamentoTotal,downloadTotal,faturamentoBruto,custoFirebaseTotal,maiorCusto,maiorLucro){
+  document.getElementById('kpiClientes').innerText=ativos;
+  document.getElementById('kpiArmazenamento').innerText=armazenamentoTotal.toFixed(4);
+  document.getElementById('kpiDownload').innerText=downloadTotal.toFixed(4);
+  document.getElementById('kpiFirebase').innerText=custoFirebaseTotal.toFixed(2);
+  document.getElementById('kpiBruto').innerText=faturamentoBruto.toFixed(2);
+  document.getElementById('kpiLiquido').innerText=(faturamentoBruto-custoFirebaseTotal).toFixed(2);
+  document.getElementById('kpiPercentFirebase').innerText=(faturamentoBruto>0?((custoFirebaseTotal/faturamentoBruto)*100).toFixed(2):0)+'%';
+  document.getElementById('kpiClienteCaro').innerText=maiorCusto.toFixed(2);
+  document.getElementById('kpiClienteLucro').innerText=maiorLucro.toFixed(2);
+}
 
-    // === Aba Clientes ===
-    let clientes = JSON.parse(localStorage.getItem('clientes')) || [];
-    let editarIndex = null;
+function desenharGraficos(){
+  google.charts.setOnLoadCallback(()=>{
+    const dataClientes = google.visualization.arrayToDataTable([['Cliente','Despesas Firebase'],...clientes.map(c=>[c.nome,0])]);
+    const chartClientes = new google.visualization.ColumnChart(document.getElementById('graficoClientes'));
+    chartClientes.draw(dataClientes,{title:'Custo Firebase por Cliente',colors:['#00b4d8'],backgroundColor:'#0b1d33',hAxis:{textStyle:{color:'#fff'}},vAxis:{textStyle:{color:'#fff'}}});
 
-    function adicionarCliente(){
-      const cliente = {
-        nome: document.getElementById('clienteNome').value,
-        banco: document.getElementById('clienteBanco').value,
-        leituras: parseFloat(document.getElementById('clienteLeituras').value),
-        tamanhoPedido: parseFloat(document.getElementById('clienteTamanho').value),
-        tamanhoProduto: parseFloat(document.getElementById('clienteTamanhoProduto').value)
-      };
+    const dataFaturamento = google.visualization.arrayToDataTable([['Cliente','Mensalidade','Despesas Firebase'],...clientes.map(c=>[c.nome,c.mensalidade,0])]);
+    const chartFaturamento = new google.visualization.ColumnChart(document.getElementById('graficoFaturamento'));
+    chartFaturamento.draw(dataFaturamento,{title:'Faturamento x Custo Firebase',series:{0:{color:'#0077b6'},1:{color:'#00b4d8'}},backgroundColor:'#0b1d33',hAxis:{textStyle:{color:'#fff'}},vAxis:{textStyle:{color:'#fff'}}});
+  });
+}
 
-      if(editarIndex !== null){
-        clientes[editarIndex] = cliente;
-        editarIndex = null;
-      } else {
-        clientes.push(cliente);
-      }
-
-      localStorage.setItem('clientes', JSON.stringify(clientes));
-      document.getElementById('clienteNome').value = '';
-      document.getElementById('clienteBanco').value = '';
-      carregarClientes();
-    }
-
-    function editarCliente(index){
-      const c = clientes[index];
-      document.getElementById('clienteNome').value = c.nome;
-      document.getElementById('clienteBanco').value = c.banco;
-      document.getElementById('clienteLeituras').value = c.leituras;
-      document.getElementById('clienteTamanho').value = c.tamanhoPedido;
-      document.getElementById('clienteTamanhoProduto').value = c.tamanhoProduto;
-      editarIndex = index;
-    }
-
-    function excluirCliente(index){
-      clientes.splice(index,1);
-      localStorage.setItem('clientes', JSON.stringify(clientes));
-      carregarClientes();
-    }
-
-    async function carregarClientes(){
-      const cotacao = 5.43;
-      let tabela = `<table><tr><th>Cliente</th><th>Pedidos</th><th>Produtos</th><th>Armazenamento (GB)</th><th>Download (GB)</th><th>Custo R$</th><th>Ações</th></tr>`;
-      let dadosGrafico = [['Cliente','Custo Firebase (R$)']];
-      let totalCusto = 0;
-
-      for (let i=0;i<clientes.length;i++){
-        const c = clientes[i];
-        try{
-          const app = firebaseUtils.initializeApp({databaseURL:c.banco}, c.nome);
-          const db = firebaseUtils.getDatabase(app);
-          const pedidosRef = firebaseUtils.ref(db,'pedidos');
-          const produtosRef = firebaseUtils.ref(db,'produtos');
-
-          await new Promise(resolve=>{
-            firebaseUtils.onValue(pedidosRef, pedidosSnap=>{
-              const pedidosData = pedidosSnap.val() || {};
-              const pedidosCount = Object.keys(pedidosData).length;
-
-              firebaseUtils.onValue(produtosRef, produtosSnap=>{
-                const produtosData = produtosSnap.val() || {};
-                const produtosCount = Object.keys(produtosData).length;
-
-                const MBporDia = (pedidosCount * c.tamanhoPedido)/1024;
-                const armazenamentoPedidosGB = (MBporDia*30)/1024;
-                const armazenamentoProdutosGB = (produtosCount * c.tamanhoProduto)/1024;
-                const armazenamentoTotalGB = armazenamentoPedidosGB + armazenamentoProdutosGB;
-                const downloadGB = armazenamentoTotalGB * c.leituras;
-                const custoBRL = (armazenamentoTotalGB*0.18 + downloadGB*0.12)*cotacao;
-
-                totalCusto += custoBRL;
-                tabela += `<tr>
-                  <td>${c.nome}</td>
-                  <td>${pedidosCount}</td>
-                  <td>${produtosCount}</td>
-                  <td>${armazenamentoTotalGB.toFixed(4)}</td>
-                  <td>${downloadGB.toFixed(4)}</td>
-                  <td>R$ ${custoBRL.toFixed(2)}</td>
-                  <td>
-                    <button class="action-btn edit-btn" onclick="editarCliente(${i})">Editar</button>
-                    <button class="action-btn delete-btn" onclick="excluirCliente(${i})">Excluir</button>
-                  </td>
-                </tr>`;
-                dadosGrafico.push([c.nome, custoBRL]);
-                resolve();
-              });
-            });
-          });
-        } catch(e){ console.error('Erro cliente', c.nome,e); }
-      }
-
-      tabela += `</table>`;
-      tabela += `<h3>Total Estimado Firebase: R$ ${totalCusto.toFixed(2)}</h3>`;
-      document.getElementById('clientesResultado').innerHTML = tabela;
-
-      google.charts.setOnLoadCallback(()=>{
-        const data = google.visualization.arrayToDataTable(dadosGrafico);
-        const options = { title:'📊 Custo absoluto por Cliente', hAxis:{title:'Cliente'}, vAxis:{title:'Custo (R$)'}, colors:['#ef6c00'] };
-        const chart = new google.visualization.ColumnChart(document.getElementById('graficoClientes'));
-        chart.draw(data, options);
-      });
-    }
-
-    carregarClientes();
-  </script>
+carregarClientes();
+setInterval(carregarClientes,30000);
+</script>
 </body>
 </html>
